@@ -6,9 +6,9 @@ WebAgents Core Module
 __version__ = "0.1.0"
 __author__ = "WebAgents Team"
 
-from .base_agent import BaseAgent
-from .config import Config
-from .exceptions import WebAgentsException, NetworkError, ParseError, RateLimitError
+from core.base_agent import BaseAgent
+from core.config import Config
+from core.exceptions import WebAgentsException, NetworkError, ParseError, RateLimitError
 
 __all__ = [
     "BaseAgent",

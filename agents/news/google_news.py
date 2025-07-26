@@ -9,9 +9,9 @@ from typing import Dict, List, Any, Optional
 from urllib.parse import urlencode
 from datetime import datetime
 
-from ...core.base_agent import BaseAgent
-from ...core.config import Config
-from ...core.exceptions import NetworkError, ParseError
+from core.base_agent import BaseAgent
+from core.config import Config
+from core.exceptions import NetworkError, ParseError
 
 
 class GoogleNewsAgent(BaseAgent):

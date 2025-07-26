@@ -9,9 +9,9 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 import json
 
-from ...core.base_agent import BaseAgent
-from ...core.config import Config
-from ...core.exceptions import NetworkError, ParseError
+from core.base_agent import BaseAgent
+from core.config import Config
+from core.exceptions import NetworkError, ParseError
 
 
 class Jin10Agent(BaseAgent):

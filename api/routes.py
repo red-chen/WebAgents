@@ -9,14 +9,14 @@ from typing import List, Optional
 import asyncio
 from datetime import datetime
 
-from .models import (
+from api.models import (
     NewsRequest, NewsResponse, NewsItem,
     SocialRequest, SocialResponse, SocialPost,
     FinancialRequest, FinancialResponse, FinancialData,
     SearchRequest, SearchResponse, SearchResult,
     ErrorResponse
 )
-from ..agents import (
+from agents import (
     GoogleNewsAgent,
     XTwitterAgent,
     RedditAgent,
@@ -24,9 +24,9 @@ from ..agents import (
     TigerAgent,
     TradingViewAgent
 )
-from ..core.config import Config
-from ..core.exceptions import WebAgentsException
-from ..utils.logger import Logger
+from core.config import Config
+from core.exceptions import WebAgentsException
+from utils.logger import Logger
 
 router = APIRouter()
 config = Config()

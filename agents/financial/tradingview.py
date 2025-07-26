@@ -10,9 +10,9 @@ from datetime import datetime
 import json
 import re
 
-from ...core.base_agent import BaseAgent
-from ...core.config import Config
-from ...core.exceptions import NetworkError, ParseError
+from core.base_agent import BaseAgent
+from core.config import Config
+from core.exceptions import NetworkError, ParseError
 
 
 class TradingViewAgent(BaseAgent):

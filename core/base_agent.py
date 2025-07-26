@@ -7,8 +7,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, Optional, Any, List
 import time
 import logging
-from .config import Config
-from .exceptions import NetworkError, ParseError, RateLimitError
+from core.config import Config
+from core.exceptions import NetworkError, ParseError, RateLimitError
 
 logger = logging.getLogger(__name__)
 
