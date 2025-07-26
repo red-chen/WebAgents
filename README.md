@@ -1,107 +1,151 @@
 # WebAgents
 
-一个专为大模型设计的智能网站代理服务，让AI能够实时获取主流网站的最新内容。
+WebAgents是一个为大模型提供实时网站内容获取能力的代理服务系统。通过统一的API接口，支持从多个主流网站获取新闻、社交媒体内容、金融数据等信息。
 
-## 项目简介
+## 功能特性
 
-WebAgents 是一个强大的代理服务系统，专门为大语言模型提供实时网站内容获取能力。通过这个项目，AI模型可以轻松访问和获取各类主流网站的最新信息，包括新闻、社交媒体动态、金融数据等。
+- **多网站支持**: 支持Google News、X (Twitter)、Reddit、金十数据、老虎证券、TradingView等主流网站
+- **统一API接口**: 提供RESTful API，方便集成到各种应用中
+- **智能缓存**: 内置缓存机制，提高响应速度，减少重复请求
+- **频率限制**: 内置频率限制功能，避免触发网站的反爬虫机制
+- **数据处理**: 提供数据清洗、格式化、验证等功能
+- **异步支持**: 支持异步请求，提高并发处理能力
+- **日志记录**: 完整的日志记录系统，便于调试和监控
 
-## 主要功能
+## 项目结构
 
-### 🌐 多网站支持
-- **新闻网站**: 实时获取主流新闻媒体的最新资讯
-- **社交网站**: 抓取社交平台的热门内容和趋势
-- **金融交易网站**: 获取股票、加密货币等金融数据
-
-### 🤖 AI友好设计
-- 专为大语言模型优化的API接口
-- 结构化数据输出，便于AI理解和处理
-- 支持多种数据格式（JSON、XML等）
-
-### ⚡ 实时性保证
-- 高效的内容抓取机制
-- 智能缓存策略，平衡实时性与性能
-- 异步处理，支持高并发请求
-
-## 技术特点
-
-- **高可靠性**: 稳定的网站访问和数据提取
-- **可扩展性**: 易于添加新的网站支持
-- **安全性**: 遵循网站访问规范，避免过度请求
-- **智能解析**: 自动识别和提取关键信息
-
-## 使用场景
-
-- **新闻聚合**: 为AI助手提供最新新闻资讯
-- **市场分析**: 获取金融市场实时数据进行分析
-- **社交监控**: 追踪社交媒体热点和舆情
-- **内容创作**: 为AI写作提供最新素材和参考
+```
+WebAgents/
+├── agents/                 # 网站代理模块
+│   ├── news/              # 新闻类网站代理
+│   ├── social/            # 社交媒体代理
+│   └── financial/         # 金融数据代理
+├── core/                  # 核心模块
+│   ├── base_agent.py      # 基础代理类
+│   ├── config.py          # 配置管理
+│   └── exceptions.py      # 异常定义
+├── utils/                 # 工具模块
+│   ├── data_processor.py  # 数据处理
+│   ├── cache_manager.py   # 缓存管理
+│   ├── logger.py          # 日志记录
+│   └── rate_limiter.py    # 频率限制
+├── api/                   # API接口
+│   ├── routes.py          # 路由定义
+│   └── models.py          # 数据模型
+├── tests/                 # 测试模块
+├── main.py               # 主程序入口
+├── requirements.txt      # 依赖文件
+└── .env.example         # 配置文件模板
+```
 
 ## 快速开始
 
+### 1. 安装依赖
+
 ```bash
-# 克隆项目
-git clone https://github.com/red-chen/WebAgents.git
-
-# 进入项目目录
-cd WebAgents
-
-# 安装依赖
 pip install -r requirements.txt
+```
 
-# 启动服务
+### 2. 配置环境
+
+复制 `.env.example` 为 `.env` 并配置相应的API密钥：
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件，填入相应的API密钥和配置信息。
+
+### 3. 启动服务
+
+```bash
 python main.py
 ```
 
-## API 示例
+服务将在 `http://localhost:8000` 启动。
 
-```python
-# 获取新闻内容
-response = webagent.get_news(source="cnn", category="technology")
+### 4. 查看API文档
 
-# 获取金融数据
-response = webagent.get_financial_data(symbol="AAPL", data_type="price")
+访问 `http://localhost:8000/docs` 查看自动生成的API文档。
 
-# 获取社交媒体内容
-response = webagent.get_social_content(platform="twitter", topic="AI")
+## API使用示例
+
+### 获取Google新闻
+
+```bash
+curl -X POST "http://localhost:8000/api/news/google" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "人工智能", "language": "zh-CN", "limit": 10}'
 ```
 
-## 支持的网站类型
+### 获取X (Twitter)内容
 
-### 新闻媒体
-- 主流新闻网站
-- 科技资讯平台
-- 财经新闻网站
+```bash
+curl -X POST "http://localhost:8000/api/social/twitter" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "AI", "result_type": "recent", "limit": 20}'
+```
 
-### 社交平台
-- 微博、Twitter等社交媒体
-- 论坛和社区网站
-- 专业社交网络
+### 获取Reddit内容
 
-### 金融平台
-- 股票交易网站
-- 加密货币交易所
-- 金融数据提供商
+```bash
+curl -X POST "http://localhost:8000/api/social/reddit" \
+  -H "Content-Type: application/json" \
+  -d '{"subreddit": "MachineLearning", "sort": "hot", "limit": 15}'
+```
 
-## 贡献指南
+### 获取金融数据
 
-我们欢迎社区贡献！如果您想要：
-- 添加新的网站支持
-- 改进现有功能
-- 修复bug或优化性能
+```bash
+curl -X POST "http://localhost:8000/api/financial/jin10" \
+  -H "Content-Type: application/json" \
+  -d '{"data_type": "flash", "limit": 20}'
+```
 
-请提交Pull Request或创建Issue。
+## 配置说明
+
+主要配置项说明：
+
+- `DEBUG`: 调试模式开关
+- `LOG_LEVEL`: 日志级别
+- `CACHE_TTL`: 缓存过期时间
+- `REQUEST_TIMEOUT`: 请求超时时间
+- `RATE_LIMIT_*`: 各网站的频率限制设置
+- API密钥配置（需要申请相应网站的API访问权限）
+
+## 开发指南
+
+### 添加新的网站代理
+
+1. 在相应的 `agents` 子目录下创建新的代理类
+2. 继承 `BaseAgent` 类
+3. 实现 `fetch_content` 和 `parse_content` 方法
+4. 在 `api/routes.py` 中添加相应的API端点
+
+### 运行测试
+
+```bash
+pytest tests/
+```
+
+### 代码格式化
+
+```bash
+black .
+flake8 .
+```
 
 ## 许可证
 
-本项目采用 [LICENSE](LICENSE) 许可证。
+本项目采用 MIT 许可证。详见 [LICENSE](LICENSE) 文件。
 
-## 联系我们
+## 贡献
 
-如有问题或建议，请通过以下方式联系：
-- 创建 GitHub Issue
-- 发送邮件至项目维护者
+欢迎提交Issue和Pull Request来改进这个项目。
 
----
+## 注意事项
 
-**注意**: 使用本项目时请遵守相关网站的使用条款和robots.txt规则，确保合法合规地获取网站内容。
+1. 使用本项目时请遵守各网站的使用条款和robots.txt规则
+2. 合理设置频率限制，避免对目标网站造成过大压力
+3. 某些功能需要相应的API密钥，请确保已正确配置
+4. 在生产环境中使用时，请注意安全性和稳定性配置
