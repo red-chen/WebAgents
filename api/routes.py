@@ -32,13 +32,77 @@ router = APIRouter()
 config = Config()
 logger = Logger()
 
-# 初始化代理实例
-google_news_agent = GoogleNewsAgent(config)
-x_twitter_agent = XTwitterAgent(config)
-reddit_agent = RedditAgent(config)
-jin10_agent = Jin10Agent(config)
-tiger_agent = TigerAgent(config)
-tradingview_agent = TradingViewAgent(config)
+# Agent实例缓存
+_agent_cache = {}
+
+def get_agent(agent_type: str):
+    """
+    获取代理实例，支持懒加载和错误处理
+    
+    Args:
+        agent_type: 代理类型 (google_news, x_twitter, reddit, jin10, tiger, tradingview)
+    
+    Returns:
+        代理实例
+        
+    Raises:
+        HTTPException: 当代理未启用或初始化失败时
+    """
+    if agent_type in _agent_cache:
+        return _agent_cache[agent_type]
+    
+    try:
+        # 检查代理是否启用
+        agent_enabled_key = f"{agent_type.upper()}_ENABLED"
+        if not config.get(agent_enabled_key, True):  # 默认启用
+            raise HTTPException(
+                status_code=503, 
+                detail=f"{agent_type} 代理已被禁用，请在配置中启用后重试"
+            )
+        
+        # 懒加载代理实例
+        if agent_type == "google_news":
+            agent = GoogleNewsAgent(config)
+        elif agent_type == "x_twitter":
+            agent = XTwitterAgent(config)
+        elif agent_type == "reddit":
+            agent = RedditAgent(config)
+        elif agent_type == "jin10":
+            agent = Jin10Agent(config)
+        elif agent_type == "tiger":
+            agent = TigerAgent(config)
+        elif agent_type == "tradingview":
+            agent = TradingViewAgent(config)
+        else:
+            raise HTTPException(status_code=400, detail=f"未知的代理类型: {agent_type}")
+        
+        # 缓存代理实例
+        _agent_cache[agent_type] = agent
+        logger.log_info(f"成功初始化 {agent_type} 代理")
+        return agent
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = f"初始化 {agent_type} 代理失败: {str(e)}"
+        logger.log_error(error_msg)
+        
+        # 根据错误类型提供更友好的错误信息
+        if "credentials" in str(e).lower() or "authentication" in str(e).lower():
+            raise HTTPException(
+                status_code=503,
+                detail=f"{agent_type} 代理的API凭证未配置或无效，请检查配置文件"
+            )
+        elif "network" in str(e).lower() or "connection" in str(e).lower():
+            raise HTTPException(
+                status_code=503,
+                detail=f"{agent_type} 代理网络连接失败，请检查网络连接"
+            )
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail=f"{agent_type} 代理暂时不可用: {str(e)}"
+            )
 
 
 @router.get("/health", summary="健康检查")
@@ -49,6 +113,46 @@ async def health_check():
         "timestamp": datetime.now(),
         "version": "1.0.0"
     }
+
+
+@router.get("/api/agents/status", summary="获取Agent状态")
+async def get_agents_status():
+    """获取所有Agent的启用状态和初始化状态"""
+    try:
+        enabled_agents = config.get_enabled_agents()
+        agent_status = {}
+        
+        for agent_type, enabled in enabled_agents.items():
+            status = {
+                "enabled": enabled,
+                "initialized": agent_type in _agent_cache,
+                "error": None
+            }
+            
+            # 如果agent已启用但未初始化，尝试获取错误信息
+            if enabled and agent_type not in _agent_cache:
+                try:
+                    # 尝试初始化以获取可能的错误
+                    get_agent(agent_type)
+                    status["initialized"] = True
+                except HTTPException as e:
+                    status["error"] = e.detail
+                except Exception as e:
+                    status["error"] = str(e)
+            
+            agent_status[agent_type] = status
+        
+        return {
+            "agents": agent_status,
+            "total_agents": len(enabled_agents),
+            "enabled_count": sum(1 for enabled in enabled_agents.values() if enabled),
+            "initialized_count": len(_agent_cache),
+            "timestamp": datetime.now()
+        }
+        
+    except Exception as e:
+        logger.log_error(f"Error getting agent status: {str(e)}")
+        raise HTTPException(status_code=500, detail="获取Agent状态失败")
 
 
 @router.get("/api/news/google", response_model=NewsResponse, summary="获取Google新闻")
@@ -62,6 +166,9 @@ async def get_google_news(
 ):
     """获取Google新闻数据"""
     try:
+        # 获取代理实例
+        google_news_agent = get_agent("google_news")
+        
         logger.log_api_request("google_news", {"query": query, "lang": lang, "region": region})
         
         # 构建请求参数
@@ -107,6 +214,8 @@ async def get_google_news(
             page_size=limit
         )
         
+    except HTTPException:
+        raise
     except WebAgentsException as e:
         logger.log_error(f"Google News API error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -125,6 +234,9 @@ async def get_x_content(
 ):
     """获取X(Twitter)内容"""
     try:
+        # 获取代理实例
+        x_twitter_agent = get_agent("x_twitter")
+        
         logger.log_api_request("x_twitter", {"query": query, "type": type})
         
         # 根据类型获取数据
@@ -167,6 +279,8 @@ async def get_x_content(
             page_size=limit
         )
         
+    except HTTPException:
+        raise
     except WebAgentsException as e:
         logger.log_error(f"X Twitter API error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -185,6 +299,9 @@ async def get_reddit_content(
 ):
     """获取Reddit内容"""
     try:
+        # 获取代理实例
+        reddit_agent = get_agent("reddit")
+        
         logger.log_api_request("reddit", {"subreddit": subreddit, "sort": sort})
         
         # 获取Reddit数据
@@ -225,6 +342,8 @@ async def get_reddit_content(
             page_size=limit
         )
         
+    except HTTPException:
+        raise
     except WebAgentsException as e:
         logger.log_error(f"Reddit API error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -241,6 +360,9 @@ async def get_jin10_data(
 ):
     """获取金十数据财经信息"""
     try:
+        # 获取代理实例
+        jin10_agent = get_agent("jin10")
+        
         logger.log_api_request("jin10", {"category": category})
         
         # 根据类型获取数据
@@ -277,6 +399,8 @@ async def get_jin10_data(
             page_size=limit
         )
         
+    except HTTPException:
+        raise
     except WebAgentsException as e:
         logger.log_error(f"Jin10 API error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -295,6 +419,9 @@ async def get_tiger_data(
 ):
     """获取老虎证券股票数据"""
     try:
+        # 获取代理实例
+        tiger_agent = get_agent("tiger")
+        
         logger.log_api_request("tiger", {"symbol": symbol, "market": market, "data_type": data_type})
         
         # 根据类型获取数据
@@ -339,6 +466,8 @@ async def get_tiger_data(
             page_size=limit
         )
         
+    except HTTPException:
+        raise
     except WebAgentsException as e:
         logger.log_error(f"Tiger API error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -358,6 +487,9 @@ async def get_tradingview_data(
 ):
     """获取TradingView数据"""
     try:
+        # 获取代理实例
+        tradingview_agent = get_agent("tradingview")
+        
         logger.log_api_request("tradingview", {"symbol": symbol, "data_type": data_type})
         
         # 根据类型获取数据
@@ -397,6 +529,8 @@ async def get_tradingview_data(
             page_size=limit
         )
         
+    except HTTPException:
+        raise
     except WebAgentsException as e:
         logger.log_error(f"TradingView API error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -416,15 +550,19 @@ async def search_content(request: SearchRequest):
         
         # 根据指定的数据源创建搜索任务
         if "google_news" in request.sources and "news" in request.data_types:
+            google_news_agent = get_agent("google_news")
             tasks.append(("google_news", google_news_agent.search_news(request.query, limit=request.limit)))
         
         if "twitter" in request.sources and "social" in request.data_types:
+            x_twitter_agent = get_agent("x_twitter")
             tasks.append(("twitter", x_twitter_agent.search_tweets(request.query, limit=request.limit)))
         
         if "reddit" in request.sources and "social" in request.data_types:
+            reddit_agent = get_agent("reddit")
             tasks.append(("reddit", reddit_agent.search_posts(request.query, limit=request.limit)))
         
         if "jin10" in request.sources and "financial" in request.data_types:
+            jin10_agent = get_agent("jin10")
             tasks.append(("jin10", jin10_agent.get_flash_news(limit=request.limit)))
         
         # 并发执行搜索任务
@@ -438,6 +576,7 @@ async def search_content(request: SearchRequest):
             
             # 根据数据源解析结果
             if source == "google_news":
+                google_news_agent = get_agent("google_news")
                 parsed_data = google_news_agent.parse_content(result)
                 for item in parsed_data.get("articles", []):
                     search_result = SearchResult(
@@ -453,6 +592,7 @@ async def search_content(request: SearchRequest):
                     search_results.append(search_result)
             
             elif source == "twitter":
+                x_twitter_agent = get_agent("x_twitter")
                 parsed_data = x_twitter_agent.parse_content(result)
                 for item in parsed_data.get("tweets", []):
                     search_result = SearchResult(

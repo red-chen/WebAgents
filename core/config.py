@@ -38,6 +38,14 @@ class Config:
     api_host: str = field(default_factory=lambda: os.getenv('API_HOST', '0.0.0.0'))
     api_port: int = field(default_factory=lambda: int(os.getenv('API_PORT', '8000')))
     
+    # Agent启用/禁用配置
+    google_news_enabled: bool = field(default_factory=lambda: os.getenv('GOOGLE_NEWS_ENABLED', 'True').lower() == 'true')
+    x_twitter_enabled: bool = field(default_factory=lambda: os.getenv('X_TWITTER_ENABLED', 'True').lower() == 'true')
+    reddit_enabled: bool = field(default_factory=lambda: os.getenv('REDDIT_ENABLED', 'True').lower() == 'true')
+    jin10_enabled: bool = field(default_factory=lambda: os.getenv('JIN10_ENABLED', 'True').lower() == 'true')
+    tiger_enabled: bool = field(default_factory=lambda: os.getenv('TIGER_ENABLED', 'True').lower() == 'true')
+    tradingview_enabled: bool = field(default_factory=lambda: os.getenv('TRADINGVIEW_ENABLED', 'True').lower() == 'true')
+    
     # Google News配置
     google_news_rss_base: str = "https://news.google.com/rss"
     google_news_languages: Dict[str, str] = field(default_factory=lambda: {
@@ -111,6 +119,67 @@ class Config:
             self.reddit_client_id,
             self.reddit_client_secret
         ])
+    
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        获取配置值
+        
+        Args:
+            key: 配置键名
+            default: 默认值
+            
+        Returns:
+            配置值
+        """
+        # 将键名转换为小写并替换下划线为属性名格式
+        attr_name = key.lower()
+        
+        # 如果是agent启用配置，转换为对应的属性名
+        if attr_name.endswith('_enabled'):
+            agent_name = attr_name.replace('_enabled', '')
+            if agent_name == 'google_news':
+                attr_name = 'google_news_enabled'
+            elif agent_name == 'x_twitter':
+                attr_name = 'x_twitter_enabled'
+            elif agent_name == 'reddit':
+                attr_name = 'reddit_enabled'
+            elif agent_name == 'jin10':
+                attr_name = 'jin10_enabled'
+            elif agent_name == 'tiger':
+                attr_name = 'tiger_enabled'
+            elif agent_name == 'tradingview':
+                attr_name = 'tradingview_enabled'
+        
+        return getattr(self, attr_name, default)
+    
+    def is_agent_enabled(self, agent_type: str) -> bool:
+        """
+        检查指定agent是否启用
+        
+        Args:
+            agent_type: agent类型
+            
+        Returns:
+            是否启用
+        """
+        enabled_key = f"{agent_type}_enabled"
+        return self.get(enabled_key, True)
+    
+    def get_enabled_agents(self) -> Dict[str, bool]:
+        """
+        获取所有agent的启用状态
+        
+        Returns:
+            agent启用状态字典
+        """
+        return {
+            'google_news': self.google_news_enabled,
+            'x_twitter': self.x_twitter_enabled,
+            'reddit': self.reddit_enabled,
+            'jin10': self.jin10_enabled,
+            'tiger': self.tiger_enabled,
+            'tradingview': self.tradingview_enabled
+        }
 
 
 # 全局配置实例
